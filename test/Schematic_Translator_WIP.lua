@@ -294,6 +294,8 @@ function parse(a, h, containsName)
     i3 = h.read()
     i4 = h.read()
     i = i1*256*256*256 + i2*256*256 + i3*256 + i4
+    print(type .. " " .. i1 .. " " .. i2 .. " " .. i3 .. " " .. i4 .. " " .. i)
+    sleep(5)
     for j=1,i do
       parse(h.read(), h, false)
     end
@@ -325,20 +327,25 @@ function place()
 end
 
 h = fs.open(filename, "rb")
-fBlockList = fs.open("BlockList", "w")
+--fBlockList = fs.open("BlockList", "w")
 
 a = 0
 while (a ~= nil) do
   a = h.read()
   parse(a, h)
 end
+
+--[[
  -- Write the block data to the fBlockList file
 if (a == nil) then
-  for i=1, blocks.maxn(), 1
+  for i=0, (blocks.maxn() - 1), 1
   do
     fBlockList.write(blocks[i] .. ":" .. data[i],"\n")
   end
 end
+]]
+
+
 
 write("length: " .. length)
 write("   width: " .. width)
