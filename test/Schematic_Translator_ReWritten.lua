@@ -1,4 +1,20 @@
 
+---- NBT Tag Values -----------------------------------------------------------
+
+local tagEnd = 0
+local tagByte = 1
+local tagShort = 2
+local tagInt = 3
+local tagLong = 4
+local tagFloat = 5
+local tagDouble = 6
+local tagByteArray = 7
+local tagString = 8
+local tagList = 9
+local tagCompound = 10
+
+-------------------------------------------------------------------------------
+
 --Variables and Tables
 local blocks = { }
 local damages = { }
@@ -26,9 +42,14 @@ h = fs.open(fileName, "rb")
 
 --
 
+-- function to resize an array
+function resizeTable(t,i)
+    setmetatable(t,{__len=function() return i end})
+end
+
 function readbyte(h)
   local b = h.read()
-  sleep(0)
+
   if not b then
     error('readbyte', 2)
     abort = 1
@@ -76,9 +97,10 @@ function parse(a, h, containsName)
     name = readname(h)
   end
 
-  if a==1 then
+  if a==tagByte then
     discardBytes(h, 1)
-  elseif a==2 then
+
+  elseif a==tagShort then
     local i1 = readbyte(h)
     local i2 = readbyte(h)
     local i = i1*256 + i2
@@ -89,23 +111,38 @@ function parse(a, h, containsName)
     elseif (name=="Width") then
       width = i
     end
-  elseif a==3 then
+
+  elseif a==tagInt then
     discardBytes(h, 4)
-  elseif a==4 then
+
+  elseif a==tagLong then
     discardBytes(h,8)
-  elseif a==5 then
+
+  elseif a==tagFloat then
     discardBytes(h,4)
-  elseif a==6 then
+
+  elseif a==tagDouble then
     discardBytes(h,8)
-  elseif a==7 then
+
+  elseif a==tagByteArray then
     local i1 = readbyte(h)
     local i2 = readbyte(h)
     local i3 = readbyte(h)
     local i4 = readbyte(h)
-    local i = i1*256*256*256 + i2*256*256 + i3*256 + i4
+    -- Convert signed int (32bit) to decimal
+    local i = (i1*256*256*256) + (i2*256*256) + (i3*256) + i4
+    print(i1 .. " " .. i2 .. " " .. i3 .. " " .. i4 .. " " .. i)
+
+    local yieldTimer = os.startTimer(9.8)
+
     if name == "Blocks" then
       print('b')
+      print(i)
+      -- Set table size to prevent rehashing
+      resizeTable(blocks,i)
+
       for i = 1, i do
+        print(i)
         local id = readbyte(h)
         if id > 0 then
           local b = {
@@ -117,10 +154,23 @@ function parse(a, h, containsName)
           --assignCoord()
         end
         if (i % 1000) == 0 then
+          os.queueEvent("fakeEvent")
+          os.pullEvent()
         end
+
+        --[[ timer
+        yield = yield + 1
+        if yield == 45000 then
+        os.queueEvent("fakeEvent")
+        os.pullEvent()
+      end]]
+
       end
+
     elseif name == "Data" then
       print('d')
+      -- Set table size to prevent rehashing
+      resizeTable(damages,i)
       for i = 1, i do
         local dmg = readbyte(h)
         if dmg > 0 then
@@ -133,24 +183,27 @@ function parse(a, h, containsName)
       print('db')
       discardBytes(h,i)
     end
-  elseif a==8 then
+
+  elseif a==tagString then
     local i1 = readbyte(h)
     local i2 = readbyte(h)
     local i = i1*256 + i2
     discardBytes(h,i)
-  elseif a==9 then
+
+  elseif a==tagList then
         local type = readbyte(h)
         local i1 = readbyte(h)
     local i2 = readbyte(h)
     local i3 = readbyte(h)
     local i4 = readbyte(h)
     local i = i1*256*256*256 + i2*256*256 + i3*256 + i4
-    print(type .. " " .. i1 .. " " .. i2 .. " " .. i3 .. " " .. i4 .. " " .. i)
+    --print(type .. " " .. i1 .. " " .. i2 .. " " .. i3 .. " " .. i4 .. " " .. i)
     for j=1,i do
       --print(i)
       --print(type)
       parse(type, h, false)
     end
+
   elseif a > 11 then
     error('invalid tag')
     abort = 1
